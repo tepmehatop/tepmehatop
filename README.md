@@ -16,21 +16,6 @@
 <a href="https://tepmehatop.github.io/tepmehatop/"><img src="https://raw.githubusercontent.com/tepmehatop/tepmehatop/main/profile/game-card.svg" alt="Play Bug Hunt — a pixel game made with Svelte" width="100%"></a>
 
 Catch bugs before they reach production. Made with Svelte, runs right in your browser.
-
-### 🐛 Office Bug Hunt — play right here
-
-<!-- BUGHUNT:START -->
-<p align="center"><img src="https://raw.githubusercontent.com/tepmehatop/tepmehatop/main/bughunt/board.svg?v=1" alt="Bug Hunt office" width="100%"></p>
-
-**Where is the bug hiding?** Pick a desk — an issue opens, press **Submit**, and in ~30 s your character walks in and checks it. Clean desks give a hint: 🔥 hot (next door) · 🌤️ warm · 🧊 cold.
-
-| | | | |
-|:-:|:-:|:-:|:-:|
-| ~~A~~ 🌤️ | [**B**](https://github.com/tepmehatop/tepmehatop/issues/new?title=bughunt%7Ccheck%7CB&body=Just%20press%20**Submit%20new%20issue**%20%E2%80%94%20a%20GitHub%20Action%20will%20walk%20your%20character%20to%20this%20desk%20in%20~30%20seconds.) | [**C**](https://github.com/tepmehatop/tepmehatop/issues/new?title=bughunt%7Ccheck%7CC&body=Just%20press%20**Submit%20new%20issue**%20%E2%80%94%20a%20GitHub%20Action%20will%20walk%20your%20character%20to%20this%20desk%20in%20~30%20seconds.) | [**D**](https://github.com/tepmehatop/tepmehatop/issues/new?title=bughunt%7Ccheck%7CD&body=Just%20press%20**Submit%20new%20issue**%20%E2%80%94%20a%20GitHub%20Action%20will%20walk%20your%20character%20to%20this%20desk%20in%20~30%20seconds.) |
-| [**E**](https://github.com/tepmehatop/tepmehatop/issues/new?title=bughunt%7Ccheck%7CE&body=Just%20press%20**Submit%20new%20issue**%20%E2%80%94%20a%20GitHub%20Action%20will%20walk%20your%20character%20to%20this%20desk%20in%20~30%20seconds.) | [**F**](https://github.com/tepmehatop/tepmehatop/issues/new?title=bughunt%7Ccheck%7CF&body=Just%20press%20**Submit%20new%20issue**%20%E2%80%94%20a%20GitHub%20Action%20will%20walk%20your%20character%20to%20this%20desk%20in%20~30%20seconds.) | [**G**](https://github.com/tepmehatop/tepmehatop/issues/new?title=bughunt%7Ccheck%7CG&body=Just%20press%20**Submit%20new%20issue**%20%E2%80%94%20a%20GitHub%20Action%20will%20walk%20your%20character%20to%20this%20desk%20in%20~30%20seconds.) | [**H**](https://github.com/tepmehatop/tepmehatop/issues/new?title=bughunt%7Ccheck%7CH&body=Just%20press%20**Submit%20new%20issue**%20%E2%80%94%20a%20GitHub%20Action%20will%20walk%20your%20character%20to%20this%20desk%20in%20~30%20seconds.) |
-
-| Hunter | Desk | Result |
-|---|:-:|---|
 | [@tepmehatop](https://github.com/tepmehatop) | A | clean · warm |
 
 
