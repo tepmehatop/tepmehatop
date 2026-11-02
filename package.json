@@ -1,0 +1,22 @@
+{
+  "name": "tepmehatop",
+  "version": "1.0.0",
+  "scripts": {
+    "assets": "node scripts/build-assets.mjs",
+    "build:ssr": "vite build --ssr src/svg/render.js",
+    "banner": "node scripts/render-banner.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@fontsource/pixelify-sans": "^5.3.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "opentype.js": "^2.0.0",
+    "pngjs": "^7.0.0",
+    "svelte": "^5.57.3",
+    "vite": "^8.3.5"
+  },
+  "type": "module",
+  "private": true
+}
