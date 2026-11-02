@@ -1,0 +1,60 @@
+# Variant 3 — Bug Hunt. Every open "bughunt|check|X" issue is a move.
+# The job processes ALL open move issues, so nothing is lost when several people play at once.
+name: Bug Hunt
+
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: profile-commit
+  cancel-in-progress: false
+
+jobs:
+  move:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.issue.title, 'bughunt|')
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build:ssr
+
+      - name: Collect open moves
+        run: |
+          # plain listing (not search) so the just-opened issue is always included
+          gh issue list --repo "$GITHUB_REPOSITORY" --state open --json number,title,author --limit 200 > "$RUNNER_TEMP/issues.json"
+          cat "$RUNNER_TEMP/issues.json"
+
+      - name: Play
+        run: node scripts/bughunt.mjs --issues "$RUNNER_TEMP/issues.json" --replies "$RUNNER_TEMP/replies"
+        env:
+          BUG_SALT: ${{ secrets.BUG_SALT }}
+
+      - name: Commit board
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md bughunt/
+          git diff --cached --quiet && exit 0
+          git commit -m "bughunt: update office"
+          for i in 1 2 3; do git pull --rebase && git push && break; sleep 3; done
+
+      - name: Reply and close
+        run: |
+          shopt -s nullglob
+          for f in "$RUNNER_TEMP"/replies/*.md; do
+            n=$(basename "$f" .md)
+            gh issue comment "$n" --repo "$GITHUB_REPOSITORY" --body-file "$f"
+            gh issue close "$n" --repo "$GITHUB_REPOSITORY" --reason completed
+          done
