@@ -1,10 +1,27 @@
 {
   "round": 1,
   "bugHash": "208d33666a876bb71e1935de6a952e51acbe4d8c3c4c6ed203596c6967b1211f",
-  "checked": {},
-  "moves": [],
-  "guests": [],
+  "checked": {
+    "A": "warm"
+  },
+  "moves": [
+    {
+      "login": "tepmehatop",
+      "desk": "A",
+      "char": 6,
+      "round": 1,
+      "at": "2026-11-02T21:50:52.722Z",
+      "result": "clean",
+      "hint": "warm"
+    }
+  ],
+  "guests": [
+    {
+      "login": "tepmehatop",
+      "char": 6
+    }
+  ],
   "scores": {},
-  "totalMoves": 0,
+  "totalMoves": 1,
   "lastFound": null
 }
