@@ -9,6 +9,14 @@
   import CharPreview from './CharPreview.svelte';
 
   const PROFILE = 'https://github.com/tepmehatop';
+  const REPO = 'https://github.com/tepmehatop/tepmehatop';
+  // ?beat=N — a friend's score from a shared link
+  const beat = (() => {
+    const n = parseInt(new URLSearchParams(location.search).get('beat') ?? '', 10);
+    return Number.isFinite(n) && n > 0 && n < 1e6 ? n : 0;
+  })();
+  let shareState = $state(''); // '' | copied | manual
+  let shareLink = $state('');
   const store = {
     get: (k, d) => {
       try {
@@ -67,7 +75,27 @@
     hud = { score: 0, lives: 3, time: 0, sprint: 1, mult: 1 };
   }
 
+  async function share() {
+    const url = new URL(location.pathname, location.origin);
+    url.searchParams.set('beat', String(result.score));
+    shareLink = url.toString();
+    const text = t.shareText(result);
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: t.title, text, url: shareLink });
+        return;
+      }
+      await navigator.clipboard.writeText(`${text} ${shareLink}`);
+      shareState = 'copied';
+      setTimeout(() => (shareState = ''), 2200);
+    } catch (err) {
+      if (err?.name === 'AbortError') return; // user closed the share sheet
+      shareState = 'manual';
+    }
+  }
+
   function start() {
+    shareState = '';
     store.set('char', charIdx);
     newGame(false);
     paused = false;
@@ -220,6 +248,7 @@
       <div class="overlay">
         <h1>{t.title}</h1>
         <p class="tag">{t.tagline}</p>
+        {#if beat}<p class="gold">⚔ {t.challenge(beat)}</p>{/if}
         <p class="label">{t.choose}</p>
         <div class="picker">
           {#each charSheetUrls as url, i}
@@ -237,11 +266,16 @@
         <p>{t.stats(result)}</p>
         <p class="muted">{t.stats2(result)}</p>
         {#if result.isBest}<p class="gold">★ {t.newBest}</p>{/if}
+        {#if beat}<p class={result.score > beat ? 'gold' : 'muted'}>{result.score > beat ? t.beat(beat) : t.notYet(beat - result.score)}</p>{/if}
         <div class="row">
           <button class="primary" type="button" onclick={start}>↻ {t.again}</button>
+          <button class="share" type="button" onclick={share}>{shareState === 'copied' ? `✓ ${t.copied}` : `↗ ${t.share}`}</button>
           <button type="button" onclick={() => { newGame(true); screen = 'menu'; }}>{t.menu}</button>
         </div>
-        <a href={PROFILE}>{t.profile} →</a>
+        {#if shareState === 'manual'}
+          <input class="link" readonly value={shareLink} onfocus={(e) => e.currentTarget.select()} />
+        {/if}
+        <p class="links"><a href={REPO}>★ {t.star}</a> · <a href={PROFILE}>{t.profile} →</a></p>
       </div>
     {:else if paused}
       <div class="overlay dim"><p>{t.paused}</p></div>
@@ -325,12 +359,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: safe center;
+    overflow-y: auto;
     gap: 6px;
     padding: 12px;
     text-align: center;
     background: rgba(13, 17, 23, 0.72);
     backdrop-filter: blur(1px);
+  }
+  .overlay > :global(*) {
+    flex-shrink: 0;
   }
   .overlay.dim {
     background: rgba(13, 17, 23, 0.55);
@@ -373,16 +411,37 @@
       font-size: 13px;
     }
     .overlay {
-      gap: 2px;
-      padding: 6px;
+      gap: 1px;
+      padding: 4px 6px;
+      font-size: 12px;
+    }
+    h1 {
+      font-size: 22px;
+    }
+    .tag {
+      display: none;
+    }
+    .big {
+      font-size: 26px !important;
     }
     .tag,
-    .hint {
-      font-size: 11px;
+    .hint,
+    .muted,
+    .links {
+      font-size: 11px !important;
+    }
+    .row {
+      gap: 4px !important;
+      margin: 3px 0 !important;
+    }
+    button {
+      font-size: 13px;
+      padding: 2px 8px;
     }
     button.primary {
-      font-size: 15px;
-      padding: 4px 14px;
+      font-size: 14px;
+      padding: 3px 12px;
+      margin-top: 0;
     }
   }
   .big {
@@ -398,8 +457,28 @@
   }
   .row {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-end;
     gap: 8px;
     margin: 6px 0;
+  }
+  button.share {
+    background: #1f6feb;
+    border-color: #388bfd;
+  }
+  .link {
+    width: min(100%, 420px);
+    font: inherit;
+    font-size: 12px;
+    color: #e6edf3;
+    background: #0d1117;
+    border: 2px solid #30363d;
+    border-radius: 6px;
+    padding: 4px 6px;
+  }
+  .links {
+    font-size: 14px;
   }
   button {
     font: inherit;
