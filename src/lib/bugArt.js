@@ -10,5 +10,6 @@ export const CHECK_ART = ['......gg', '.....gG.', 'g...gG..', 'Gg.gG...', '.GgG.
 export const PALETTES = {
   normal: { k: '#1b1b28', R: '#e5484d', r: '#a1262c', w: '#ffd6d6', y: '#ffe066' },
   critical: { k: '#1b1b28', R: '#a371f7', r: '#6e40c9', w: '#eadcff', y: '#ff7b72' },
+  flaky: { k: '#1b1b28', R: '#e3b341', r: '#9e6a03', w: '#fff5cc', y: '#ffffff' },
   check: { g: '#3fb950', G: '#1a7f37' },
 };

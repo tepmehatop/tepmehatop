@@ -12,11 +12,21 @@ const PUSH_LINES = ['git push', 'push -f', 'deploy!', 'hotfix', 'YOLO', 'merge!'
 const CATCH_LINES = ['gotcha!', 'caught!', 'repro!', 'ticket filed', 'nope'];
 const PLAYER_SPEED = 72;
 const NPC_SPEED = 40;
+export const SPRINT_LEN = 30; // seconds per sprint
+export const COMBO_WINDOW = 2.5; // seconds to catch the next bug and keep the combo
+export const FLAKY_CYCLE = 2.4; // flaky bugs: visible for FLAKY_ON of every cycle
+export const FLAKY_ON = 1.5;
+const POINTS = { normal: 10, flaky: 15, critical: 25 };
+
+/** Score multiplier for a combo count: 1–2 → x1, 3–4 → x2, … up to x5. */
+export const comboMult = (combo) => Math.min(5, 1 + Math.floor(Math.max(0, combo - 1) / 2));
+/** Flaky bugs blink in and out of existence (and can't be caught while gone). */
+export const flakyVisible = (b) => b.kind !== 'flaky' || (b.t + b.phase) % FLAKY_CYCLE < FLAKY_ON;
 
 const pick = (arr, rnd) => arr[Math.floor(rnd() * arr.length)];
 const standPos = ([c, r]) => ({ x: c * T, y: r * T - 14 });
 
-export function createGame({ playerChar, rnd = Math.random }) {
+export function createGame({ playerChar, rnd = Math.random, demo = false }) {
   const dist = prodDistance();
   const pool = [...Array(10).keys()].filter((c) => c !== playerChar).sort(() => rnd() - 0.5);
   const npcs = SEATS.map((seat, i) => ({
@@ -51,6 +61,12 @@ export function createGame({ playerChar, rnd = Math.random }) {
     nextSpawn: 1.6,
     nextCoffeeRun: 7,
     coffee: { available: true, respawnAt: 0 },
+    demo,
+    combo: 0,
+    comboTimer: 0,
+    bestCombo: 0,
+    sprint: 1,
+    banner: demo ? null : { n: 1, bonus: 0, restored: false, until: 1.8 },
   };
 }
 
@@ -98,10 +114,15 @@ function movePlayer(g, dt, input) {
 // ---- Bugs ------------------------------------------------------------------------
 function spawnBug(g, seat) {
   const d = Math.min(g.time / 60, 2);
-  const critical = g.time > 20 && g.rnd() < Math.min(0.35, 0.1 + 0.15 * d);
+  const roll = g.rnd();
+  const critical = g.time > 20 && roll < Math.min(0.35, 0.1 + 0.15 * d);
+  // flaky bugs join from sprint 2: "works on my machine" — now you see them, now you don't
+  const flaky = !critical && g.sprint >= 2 && roll < Math.min(0.35, 0.1 + 0.15 * d) + 0.22;
+  const kind = critical ? 'critical' : flaky ? 'flaky' : 'normal';
   const [c, r] = seat.spawn;
   const bug = {
-    kind: critical ? 'critical' : 'normal',
+    kind,
+    phase: g.rnd() * FLAKY_CYCLE,
     x: c * T + 8,
     y: r * T + 8,
     c,
@@ -110,8 +131,8 @@ function spawnBug(g, seat) {
     pr: r - 1,
     tc: c,
     tr: r,
-    speed: Math.min(48, 21 + 12 * d) * (critical ? 1.45 : 1),
-    wander: critical ? 0.12 : 0.3,
+    speed: Math.min(48, 21 + 12 * d) * (critical ? 1.45 : flaky ? 1.1 : 1),
+    wander: critical ? 0.12 : flaky ? 0.25 : 0.3,
     dir: 'down',
     t: 0,
   };
@@ -226,12 +247,29 @@ export function update(g, dt, input) {
   g.flash = Math.max(0, g.flash - dt);
   g.player.t += dt;
   for (const ch of [g.player, ...g.npcs]) if (ch.bubble && g.time > ch.bubble.until) ch.bubble = null;
+  if (g.banner && g.time > g.banner.until) g.banner = null;
   if (g.over) {
     for (const n of g.npcs) n.t += dt;
     return;
   }
   g.time += dt;
   const d = Math.min(g.time / 60, 2);
+
+  // combo expires if you don't catch the next bug quickly
+  g.comboTimer = Math.max(0, g.comboTimer - dt);
+  if (g.comboTimer === 0) g.combo = 0;
+
+  // sprints: every SPRINT_LEN seconds you survive, the release ships — bonus points and one prod life back
+  const sprint = 1 + Math.floor(g.time / SPRINT_LEN);
+  if (!g.demo && sprint > g.sprint) {
+    g.sprint = sprint;
+    const bonus = 50 * (sprint - 1);
+    const restored = g.lives < 3;
+    g.score += bonus;
+    if (restored) g.lives += 1;
+    g.banner = { n: sprint, bonus, restored, until: g.time + 2.4 };
+    g.events.push('sprint');
+  }
 
   // developers push code → bugs
   g.nextSpawn -= dt;
@@ -279,6 +317,8 @@ export function update(g, dt, input) {
       g.flash = 0.45;
       g.fx.push({ kind: 'text', text: 'INCIDENT!', x: b.x, y: b.y - 6, color: '#ff7b72', t: 0, life: 1.1 });
       say(p, pick(['noooo', 'prod!!', 'rollback!'], g.rnd), g.time, 1.1);
+      g.combo = 0;
+      g.comboTimer = 0;
       g.events.push('escape');
       if (g.lives <= 0) {
         g.over = true;
@@ -286,15 +326,22 @@ export function update(g, dt, input) {
       }
       continue;
     }
-    if (Math.hypot(fx - b.x, fy - b.y) < 12.5) {
+    if (flakyVisible(b) && Math.hypot(fx - b.x, fy - b.y) < 12.5) {
       b.dead = true;
-      const pts = b.kind === 'critical' ? 25 : 10;
+      const before = comboMult(g.combo);
+      g.combo += 1;
+      g.comboTimer = COMBO_WINDOW;
+      g.bestCombo = Math.max(g.bestCombo, g.combo);
+      const mult = comboMult(g.combo);
+      const pts = POINTS[b.kind] * mult;
       g.score += pts;
       g.caught += 1;
-      g.fx.push({ kind: 'text', text: `+${pts}`, x: b.x, y: b.y - 6, color: b.kind === 'critical' ? '#d2a8ff' : '#7ee787', t: 0, life: 0.9 });
+      const color = { critical: '#d2a8ff', flaky: '#f2cc60', normal: '#7ee787' }[b.kind];
+      g.fx.push({ kind: 'text', text: mult > 1 ? `+${pts} x${mult}` : `+${pts}`, x: b.x, y: b.y - 6, color, t: 0, life: 0.9 });
       g.fx.push({ kind: 'check', x: b.x - 4, y: b.y - 3, t: 0, life: 0.6 });
-      if (g.rnd() < 0.35) say(p, pick(CATCH_LINES, g.rnd), g.time, 0.9);
-      g.events.push('catch');
+      if (mult > before) say(p, `combo x${mult}!`, g.time, 1.0);
+      else if (g.rnd() < 0.35) say(p, pick(CATCH_LINES, g.rnd), g.time, 0.9);
+      g.events.push(mult > before ? 'combo' : 'catch');
     }
   }
   g.bugs = g.bugs.filter((b) => !b.dead);

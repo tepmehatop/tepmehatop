@@ -46,6 +46,7 @@ export async function loadAssets() {
   const bugs = {
     normal: BUG_FRAMES.map((f) => asciiCanvas(f, PALETTES.normal)),
     critical: BUG_FRAMES.map((f) => asciiCanvas(f, PALETTES.critical)),
+    flaky: BUG_FRAMES.map((f) => asciiCanvas(f, PALETTES.flaky)),
   };
   const check = asciiCanvas(CHECK_ART, PALETTES.check);
   return { chars, furn, floors, bugs, check };
