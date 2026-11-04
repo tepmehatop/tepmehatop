@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { loadAssets, charSheetUrls } from './assets.js';
-  import { createGame, update } from './engine.js';
+  import { createGame, update, comboMult } from './engine.js';
   import { draw } from './draw.js';
   import { W, H } from './map.js';
   import { play } from './sound.js';
@@ -33,7 +33,7 @@
   let charIdx = $state(store.get('char', 0));
   let paused = $state(false);
   let best = $state(store.get('best', 0));
-  let hud = $state({ score: 0, lives: 3, time: 0 });
+  let hud = $state({ score: 0, lives: 3, time: 0, sprint: 1, mult: 1 });
   let result = $state(null);
   let stageW = $state(480);
 
@@ -61,9 +61,10 @@
     }
   }
 
-  function newGame(demo) {
-    game = createGame({ playerChar: charIdx });
-    if (demo) game.nextSpawn = Infinity;
+  function newGame(isDemo) {
+    game = createGame({ playerChar: charIdx, demo: isDemo });
+    if (isDemo) game.nextSpawn = Infinity;
+    hud = { score: 0, lives: 3, time: 0, sprint: 1, mult: 1 };
   }
 
   function start() {
@@ -80,7 +81,15 @@
       best = game.score;
       store.set('best', best);
     }
-    result = { score: game.score, caught: game.caught, escaped: game.escaped, time: Math.floor(game.time), isBest };
+    result = {
+      score: game.score,
+      caught: game.caught,
+      escaped: game.escaped,
+      time: Math.floor(game.time),
+      sprint: game.sprint,
+      bestCombo: game.bestCombo,
+      isBest,
+    };
     screen = 'over';
   }
 
@@ -156,11 +165,11 @@
           update(game, dt, input);
           for (const ev of game.events) play(ev, muted);
           game.events.length = 0;
-          if (game.score !== hud.score || game.lives !== hud.lives || Math.floor(game.time) !== hud.time)
-            hud = { score: game.score, lives: game.lives, time: Math.floor(game.time) };
+          const next = { score: game.score, lives: game.lives, time: Math.floor(game.time), sprint: game.sprint, mult: comboMult(game.combo) };
+          if (Object.keys(next).some((k) => next[k] !== hud[k])) hud = next;
           if (game.over) finish();
         }
-        draw(ctx, game, assets, S, { you: t.you });
+        draw(ctx, game, assets, S, { you: t.you, sprint: t.sprint, shipped: t.shipped, restored: t.restored });
       }
       raf = requestAnimationFrame(frame);
     };
@@ -186,7 +195,7 @@
     <div class="stats">
       <span>{t.score} <b>{hud.score}</b></span>
       <span>{t.best} <b>{best}</b></span>
-      <span>{t.time} <b>{hud.time}s</b></span>
+      <span>{t.sprint} <b>{hud.sprint}</b></span>
       <span>{t.lives} <b class="hearts">{'♥'.repeat(Math.max(0, hud.lives))}<i>{'♥'.repeat(3 - Math.max(0, hud.lives))}</i></b></span>
     </div>
     <div class="tools">
@@ -219,12 +228,14 @@
         </div>
         <button class="primary" type="button" onclick={start}>▶ {t.start}</button>
         <p class="hint">{t.controls}</p>
+        <p class="hint">{t.rules}</p>
       </div>
     {:else if screen === 'over' && result}
       <div class="overlay">
         <h1 class="red">{t.over}</h1>
         <p class="big">{result.score}</p>
-        <p>{t.stats(result.caught, result.escaped, result.time)}</p>
+        <p>{t.stats(result)}</p>
+        <p class="muted">{t.stats2(result)}</p>
         {#if result.isBest}<p class="gold">★ {t.newBest}</p>{/if}
         <div class="row">
           <button class="primary" type="button" onclick={start}>↻ {t.again}</button>
@@ -380,6 +391,10 @@
   }
   .gold {
     color: #ffd36b;
+  }
+  .muted {
+    color: #8b949e;
+    font-size: 13px;
   }
   .row {
     display: flex;

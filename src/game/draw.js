@@ -1,6 +1,6 @@
 // Canvas renderer: pixel-perfect sprites at an integer scale, y-sorted for depth.
 import { T, W, H, COLS, ROWS, WALL_ROWS, PROD, FURNITURE, WALL_DECOR, COFFEE_PICKUP, floorAt } from './map.js';
-import { ANIM } from './engine.js';
+import { ANIM, comboMult, flakyVisible, FLAKY_CYCLE, FLAKY_ON, COMBO_WINDOW } from './engine.js';
 
 const ROW = { down: 0, up: 1, right: 2, left: 2 };
 const FONT = '"Pixelify Sans", monospace';
@@ -109,6 +109,37 @@ export function draw(ctx, g, A, S, labels) {
     ctx.fillStyle = `rgba(248,81,73,${(g.flash / 0.45) * 0.28})`;
     ctx.fillRect(-4, -4, W + 8, H + 8);
   }
+
+  // combo meter (top-left, on the wall)
+  const mult = comboMult(g.combo);
+  if (mult > 1 && g.comboTimer > 0) {
+    text(ctx, `COMBO x${mult}`, 6, 42, { size: 11, weight: 700, color: '#ffa657', outline: '#0d1117' });
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(6, 44, 60, 3);
+    ctx.fillStyle = '#ffa657';
+    ctx.fillRect(6, 44, Math.round((60 * g.comboTimer) / COMBO_WINDOW), 3);
+  }
+
+  // sprint banner — on the wall, so it never hides the floor where bugs run
+  if (g.banner && !g.over) {
+    const b = g.banner;
+    const left = b.until - g.time;
+    const bw = 236;
+    const bx = Math.round(W / 2 - bw / 2);
+    ctx.globalAlpha = Math.min(1, left / 0.4);
+    ctx.fillStyle = '#1b1b28';
+    ctx.fillRect(bx - 1, 3, bw + 2, 42);
+    ctx.fillStyle = '#26304a';
+    ctx.fillRect(bx, 4, bw, 40);
+    ctx.fillStyle = '#ffd36b';
+    ctx.fillRect(bx, 4, bw, 2);
+    text(ctx, `${labels.sprint} ${b.n}`, W / 2, b.n > 1 ? 24 : 30, { size: 18, weight: 700, color: '#ffd36b', align: 'center', outline: '#1b1b28' });
+    if (b.n > 1) {
+      const sub = `${labels.shipped} +${b.bonus}${b.restored ? ` · ${labels.restored} ♥` : ''}`;
+      text(ctx, sub, W / 2, 38, { size: 9, color: '#7ee787', align: 'center' });
+    }
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawChar(ctx, A, ch, snap) {
@@ -130,6 +161,12 @@ const BUG_ANGLE = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2
 function drawBug(ctx, A, b, snap) {
   const img = A.bugs[b.kind][Math.floor(b.t / 0.12) % 2];
   ctx.save();
+  if (b.kind === 'flaky') {
+    // flaky bugs flicker before vanishing and leave a faint ghost while gone
+    const k = (b.t + b.phase) % FLAKY_CYCLE;
+    if (!flakyVisible(b)) ctx.globalAlpha = 0.12;
+    else if (k > FLAKY_ON - 0.35) ctx.globalAlpha = Math.floor(b.t * 20) % 2 ? 0.35 : 1;
+  }
   ctx.translate(snap(b.x), snap(b.y));
   ctx.rotate(BUG_ANGLE[b.dir]);
   if (b.dir === 'left') ctx.scale(1, -1);
