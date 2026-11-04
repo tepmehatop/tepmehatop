@@ -16,10 +16,6 @@
 <a href="https://tepmehatop.github.io/tepmehatop/"><img src="https://raw.githubusercontent.com/tepmehatop/tepmehatop/main/profile/game-card.svg" alt="Play Bug Hunt — a pixel game made with Svelte" width="100%"></a>
 
 Catch bugs before they reach production. Made with Svelte, runs right in your browser.
-| [@tepmehatop](https://github.com/tepmehatop) | A | clean · warm |
-
-
-<!-- BUGHUNT:END -->
 
 ---
 
